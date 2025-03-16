@@ -27,12 +27,18 @@ def is_port_available(port: int, udp: bool = False) -> bool:
     return not in_use
 
 def get_mac_address() -> str:
-    """Get the mac address.
-
-    Uses the ``uuid`` library and the ``getnode`` method. Will format in the typical form (i.e. ae:77:99...)
     """
-    import uuid
-    return ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0,8*6,8)][::-1])
+    Returns the MAC address of the first non-loopback interface.
+    """
+    addrs = psutil.net_if_addrs()
+    for interface, snics in addrs.items():
+        if interface.lower() == 'lo' or interface.startswith('Loopback'):
+            continue
+        for snic in snics:
+            # psutil.AF_LINK is usually available as the family for MAC addresses
+            if snic.family == psutil.AF_LINK and snic.address != '00:00:00:00:00:00':
+                return snic.address
+    return "00:00:00:00:00:00"
 
 def getuser() -> str:
     """
