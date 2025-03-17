@@ -9,7 +9,7 @@ from autonomy_toolkit.utils.files import file_exists
 
 # External library imports
 from abc import ABC, abstractmethod
-import yaml, re, json
+import yaml, re, json, os
 
 # =======
 # Helpers
@@ -296,7 +296,20 @@ class ATKYamlFile(_ATKDictWrapperFile):
 
             text = self.read(filename) if filename is not None else text
 
-            self._data = yaml.safe_load(text)
+            class Loader(yaml.SafeLoader):
+
+                def __init__(self, stream):
+                    self._root = os.path.split(stream.name)[0]
+                    super(Loader, self).__init__(stream)
+
+                def include(self, node):
+                    filename = os.path.join(self._root, self.construct_scalar(node))
+                    with open(filename, 'r') as f:
+                        return yaml.load(f, Loader)
+                    
+            Loader.add_constructor('!include', Loader.include)
+
+            self._data = yaml.load(text, Loader)
 
     def contains(self, *args) -> bool:
         """
